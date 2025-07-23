@@ -26,3 +26,8 @@ export class ReportDto {
   @IsNotEmpty()
   criado_em: Date;
 }
+
+export interface ReportResponse {
+  approved: boolean;
+  message: string;
+}
