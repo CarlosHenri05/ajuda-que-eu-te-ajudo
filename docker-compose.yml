@@ -1,0 +1,62 @@
+version: '3.9'
+
+services:
+  mysql:
+    image: mysql
+    restart: always
+    environment:
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
+      MYSQL_DATABASE: denuncias
+    env_file:
+      - /api-nest/.env
+    ports:
+      - '3306:3306'
+
+  mongo:
+    image: mongo:6
+    container_name: mongo
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - '27017:27017'
+
+  api-nest:
+    build:
+      context: ./api-nest
+    container_name: api-nest
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgres://user:pass@postgres:5432/denuncias
+      IMAGE_VERIFIER_URL: http://image-verifier:8000/image
+      EMAIL_SERVICE_URL: http://email-service:3001/send-email
+
+  image-verifier:
+    build:
+      context: ./image-verifier
+    container_name: image-verifier
+    ports:
+      - '8000:8000'
+    depends_on:
+      - mongo
+
+  email-service:
+    build:
+      context: ./email-service
+    container_name: email-service
+    ports:
+      - '3001:3001'
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: frontend
+    ports:
+      - '4200:4200'
+    depends_on:
+      - api-nest
+
+volumes:
+  postgres_data:
+  mongo_data:
