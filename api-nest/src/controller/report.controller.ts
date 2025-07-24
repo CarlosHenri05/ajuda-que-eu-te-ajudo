@@ -44,9 +44,11 @@ export class ReportController {
     }
 
     try {
-      const response = firstValueFrom(
-        this.httpService.post('http://localhost:5000/verify', {
-          image_url: file.path,
+      const response = await firstValueFrom(
+        this.httpService.get('http://127.0.0.1:8000/validate', {
+          params: {
+            image_url: `http://localhost:3000/uploads/${file.filename}`,
+          },
         }),
       );
 
