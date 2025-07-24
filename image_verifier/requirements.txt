@@ -1,0 +1,4 @@
+Pillow
+fastapi
+uvicorn
+google-genai
