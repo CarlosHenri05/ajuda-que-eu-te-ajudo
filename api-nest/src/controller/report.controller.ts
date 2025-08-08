@@ -1,8 +1,7 @@
 import {
+  BadRequestException,
   Body,
   Controller,
-  HttpException,
-  HttpStatus,
   Post,
   UploadedFile,
   UseInterceptors,
@@ -37,17 +36,17 @@ export class ReportController {
   )
   async createReport(
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: ReportDto,
+    @Body() reportData: ReportDto,
   ): Promise<ReportResponse> {
-    if (!file) {
-      throw new HttpException('File is required', HttpStatus.BAD_REQUEST);
-    }
+    if (!file) throw new BadRequestException('The image is needed.');
+
+    const imageUrl = `http://localhost:3000/uploads/${file.filename}`;
 
     try {
       const response = await firstValueFrom(
         this.httpService.get('http://127.0.0.1:8000/validate', {
           params: {
-            image_url: `http://localhost:3000/uploads/${file.filename}`,
+            image_url: imageUrl,
           },
         }),
       );
@@ -58,21 +57,20 @@ export class ReportController {
           message: response.data.message,
         };
       }
-
-      await this.reportService.createReport({
-        ...body,
-        imagem_url: `http://localhost:3000/uploads/${file.filename}`,
-      });
-
-      return {
-        approved: true,
-        message: response.data.message,
-      };
     } catch (error) {
-      throw new HttpException(
-        'Error processing the report',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      throw new BadRequestException(`Error validating the image: ${error}`);
     }
+
+    await this.reportService.createReport({
+      ...reportData,
+      imagem_url: imageUrl,
+    });
+
+    // TO-DO: Hard-code government provincies email's on a list or on an prisma enum
+
+    return {
+      approved: true,
+      message: 'Everything gone right.',
+    };
   }
 }
