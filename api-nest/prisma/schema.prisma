@@ -24,6 +24,7 @@ model Report {
   endereco      String
   cep           String
   criado_em     DateTime @default(now())
+  enviar_email  Boolean
 }
 
 enum Estado {
