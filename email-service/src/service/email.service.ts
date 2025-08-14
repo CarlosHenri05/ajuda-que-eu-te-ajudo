@@ -1,15 +1,15 @@
 import { MailerService } from '@nestjs-modules/mailer';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import mongoose, { Model } from 'mongoose';
+import mongoose from 'mongoose';
 import { EmailBodyDto } from 'src/dto/email.dto';
 import { Email } from 'src/model/email.model';
+import { EmailRepository } from 'src/repository/email.repository';
 
 @Injectable()
 export class EmailService {
   constructor(
     private readonly mailService: MailerService,
-    @InjectModel(Email.name) private readonly emailModel: Model<Email>,
+    private readonly emailRepository: EmailRepository,
   ) {}
 
   async sendEmail(emailBody: EmailBodyDto): Promise<void> {
@@ -53,14 +53,7 @@ export class EmailService {
 
   async saveEmailOnDb(emailBody: EmailBodyDto): Promise<Email> {
     try {
-      const email = await new this.emailModel({
-        to: emailBody.to,
-        from: emailBody.from,
-        subject: emailBody.subject,
-        text: JSON.stringify(emailBody.text),
-      }).save();
-
-      return email;
+      return await this.emailRepository.saveEmail(emailBody);
     } catch (error) {
       if (error instanceof mongoose.Error.ValidationError) {
         throw new HttpException(
