@@ -2,6 +2,8 @@ import {
   BadRequestException,
   Body,
   Controller,
+  HttpException,
+  HttpStatus,
   Post,
   UploadedFile,
   UseInterceptors,
@@ -12,6 +14,7 @@ import { ReportService } from 'src/service/report.service';
 import { diskStorage } from 'multer';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import { stateAndEmailMap } from '../common/constants/states.hashMap';
 
 // Esse controller ainda não irá funcionar pois o serviço de verificação ainda está sendo CRIADO.
 
@@ -43,7 +46,7 @@ export class ReportController {
     const imageUrl = `http://localhost:3000/uploads/${file.filename}`;
 
     try {
-      const response = await firstValueFrom(
+      const imageValidatorResponse = await firstValueFrom(
         this.httpService.get('http://127.0.0.1:8000/validate', {
           params: {
             image_url: imageUrl,
@@ -51,10 +54,10 @@ export class ReportController {
         }),
       );
 
-      if (!response.data.approved) {
+      if (!imageValidatorResponse.data.approved) {
         return {
           approved: false,
-          message: response.data.message,
+          message: imageValidatorResponse.data.message,
         };
       }
     } catch (error) {
@@ -66,8 +69,21 @@ export class ReportController {
       imagem_url: imageUrl,
     });
 
-    // TO-DO: Hard-code government provincies email's on a list or on an prisma enum
-
+    try {
+      const emailServiceResponse = await firstValueFrom(
+        this.httpService.post('http://127.0.0.1:3001/send', {
+          subject: 'New Report Created',
+          to: stateAndEmailMap.get(reportData.estado),
+          text: JSON.stringify(reportData),
+        }),
+      );
+    } catch (error) {
+      console.log('Erro:  ' + error);
+      throw new HttpException(
+        'Error with email service',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
     return {
       approved: true,
       message: 'Everything gone right.',
