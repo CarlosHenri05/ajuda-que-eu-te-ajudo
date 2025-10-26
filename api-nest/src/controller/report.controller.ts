@@ -13,8 +13,7 @@ import { ReportDto, ReportResponse } from 'src/dto/report.dto';
 import { ReportService } from 'src/service/report.service';
 import { diskStorage } from 'multer';
 import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
-import { stateAndEmailMap } from '../common/constants/states.hashMap';
+import { RequestService } from 'src/service/request.service';
 
 // Esse controller ainda não irá funcionar pois o serviço de verificação ainda está sendo CRIADO.
 
@@ -23,6 +22,7 @@ export class ReportController {
   constructor(
     private readonly reportService: ReportService,
     private readonly httpService: HttpService,
+    private readonly requestService: RequestService,
   ) {}
 
   @Post('create')
@@ -45,48 +45,27 @@ export class ReportController {
 
     const imageUrl = `http://localhost:3000/uploads/${file.filename}`;
 
-    try {
-      const imageValidatorResponse = await firstValueFrom(
-        this.httpService.get('http://127.0.0.1:8000/validate', {
-          params: {
-            image_url: imageUrl,
-          },
-        }),
-      );
+    const imageValidator =
+      await this.requestService.imageServiceRequest(imageUrl);
 
-      if (!imageValidatorResponse.data.approved) {
-        return {
-          approved: false,
-          message: imageValidatorResponse.data.message,
-        };
-      }
-    } catch (error) {
-      throw new BadRequestException(`Error validating the image: ${error}`);
+    if (!imageValidator.approved) {
+      throw new HttpException('Bad Request', HttpStatus.BAD_REQUEST);
     }
 
-    await this.reportService.createReport({
-      ...reportData,
-      imagem_url: imageUrl,
-    });
+    const emailRequest =
+      await this.requestService.emailServiceRequest(reportData);
 
-    try {
-      const emailServiceResponse = await firstValueFrom(
-        this.httpService.post('http://127.0.0.1:3001/send', {
-          subject: 'New Report Created',
-          to: stateAndEmailMap.get(reportData.estado),
-          text: JSON.stringify(reportData),
-        }),
-      );
-    } catch (error) {
-      console.log('Erro:  ' + error);
+    if (reportData.enviar_email && !emailRequest.approved) {
       throw new HttpException(
-        'Error with email service',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        'Bad request with emailService, try again',
+        HttpStatus.BAD_REQUEST,
       );
     }
+    const savedReport = await this.reportService.createReport(reportData);
+
     return {
       approved: true,
-      message: 'Everything gone right.',
+      message: 'Everything went right.',
     };
   }
 }
