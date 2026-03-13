@@ -41,13 +41,13 @@ O ecossistema é dividido em três microsserviços especializados que utilizam c
 **Comunicação**: Requisições HTTP/REST
 
 ---
-##🛠️ Como Executar o Projeto
-####Pré-requisitos
+## 🛠️ Como Executar o Projeto
+#### Pré-requisitos
 - Docker e Docker Compose instalados.
 
 - Uma API Key do Google Gemini (disponível no Google AI Studio).
 
-####Passo a Passo
+#### Passo a Passo
 Clonar o Repositório:
 
 ````Bash
